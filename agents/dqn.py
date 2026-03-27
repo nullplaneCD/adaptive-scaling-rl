@@ -6,7 +6,7 @@ import random
 from collections import deque
 
 class Replaybuffer:
-    def _init_(self, capacity=10000):
+    def __init__(self, capacity=10000):
         self.buffer = deque(maxlen=capacity)
 
     def push(self, state, action, reward, next_state, done):
@@ -24,7 +24,7 @@ class Replaybuffer:
             np.array(dones),
             )
 
-    def _len_(self):
+    def __len__(self):
         return len(self.buffer)
     
 class DQN(nn.Module):
@@ -55,7 +55,7 @@ class DQNAgent:
         self.epsilon_min = 0.05
         self.epsilon_decay = 0.995
 
-        self.replay_buffer = ReplayBuffer(10000)
+        self.replay_buffer = Replaybuffer(10000)
         self.batch_size = 64
 
         self.action_dim = action_dim
@@ -91,4 +91,4 @@ class DQNAgent:
         self.optimizer.step()
 
     def decay_epsilon(self):
-        self.epsilon = max(self.epilon_min, self.epsilon * self.epsilon_decay)
+        self.epsilon = max(self.epsilon_min, self.epsilon * self.epsilon_decay)

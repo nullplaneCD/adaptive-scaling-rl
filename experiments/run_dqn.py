@@ -34,5 +34,5 @@ def train():
         agent.decay_epsilon()
         print(f"Episode {episode}, reward={total_reward:.2f}, avg10={avg10:.2f}, epsilon={agent.epsilon:.3f}")
 
-      if __name__ == "__main__":
+if __name__ == "__main__":
     train()
