@@ -1,5 +1,6 @@
 from env.task_env import TaskSchedulingEnv
 from agents.dqn import DQNAgent
+import numpy as np
 
 
 def train():
@@ -33,6 +34,8 @@ def train():
         avg10 = sum(rewards[-10:]) / len(rewards[-10:])
         agent.decay_epsilon()
         print(f"Episode {episode}, reward={total_reward:.2f}, avg10={avg10:.2f}, epsilon={agent.epsilon:.3f}")
+        np.save("results/rewards.npy", rewards)
+        print("Saved reward to results/rewards.npy")
 
 if __name__ == "__main__":
     train()
