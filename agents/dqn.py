@@ -45,9 +45,16 @@ class DQN(nn.Module):
 
 class DQNAgent:
     def __init__(self, state_dim, action_dim):
-        self.model = DQN(state_dim, action_dim)
-        self.optimizer = optim.Adam(self.model.parameters(), lr=1e-3)
+        self.online_net = DQN(state_dim, action_dim)
+        self.target_net = DQN(state_dim, action_dim)
+        self.target_net.load_state_dict(self.online_net.state_dict())
+        self.target_net.eval()
+
+        self.optimizer = optim.Adam(self.online_net.parameters(), lr=1e-3)
         self.loss_fn = nn.MSELoss()
+
+        self.train_steps = 0
+        self.target_update_freq = 100
 
         self.gamma = 0.99
 
@@ -65,7 +72,7 @@ class DQNAgent:
             return random.randint(0, self.action_dim - 1)
 
         state = torch.FloatTensor(state).unsqueeze(0)
-        q_values = self.model(state)
+        q_values = self.online_net(state)
         return q_values.argmax().item()
 
     def train_step(self):
@@ -76,12 +83,17 @@ class DQNAgent:
         states = torch.FloatTensor(states)
         actions = torch.LongTensor(actions).unsqueeze(1)
         rewards = torch.FloatTensor(rewards).unsqueeze(1)
-        next_state = torch.FloatTensor(dones).unsqueeze(1)
+        dones = torch.FloatTensor(dones).unsqueeze(1)
+        next_states = torch.FloatTensor(next_states)
 
-        q_values = self.mode(states).gather(1, actions)
+        q_values = self.online_net(states).gather(1, actions)
 
         with torch.no_grad():
-            next_q_values = self.mode(next_states).max(1, keepdim=True)[0]
+            # --- DDQN target ---
+            # 1. online net picks the best action for next state
+            best_actions = self.online_net(next_states).argmax(dim=1, keepdim=True)
+            # 2. target net evaluates that action (decouples selection from evaluation)
+            next_q_values = self.target_net(next_states).gather(1, best_actions)
             target = rewards + self.gamma * next_q_values * (1 - dones)
 
         loss = self.loss_fn(q_values, target)
@@ -89,6 +101,10 @@ class DQNAgent:
         self.optimizer.zero_grad()
         loss.backward()
         self.optimizer.step()
+        self.train_steps += 1
+        if self.train_steps % self.target_update_freq == 0:
+              self.target_net.load_state_dict(self.online_net.state_dict())
 
     def decay_epsilon(self):
         self.epsilon = max(self.epsilon_min, self.epsilon * self.epsilon_decay)
+       
