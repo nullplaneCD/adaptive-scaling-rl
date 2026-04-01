@@ -12,7 +12,7 @@ def train():
     agent = DDQNAgent(state_dim, action_dim)
     rewards = []
 
-    for episode in range(1000):
+    for episode in range(5000):
         state, _ = env.reset()
         total_reward = 0
 

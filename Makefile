@@ -17,6 +17,7 @@ threshold:
 
 train:
 	$(PYTHON) -m experiments.run_ddqn
+	$(PYTHON) experiments/plot_rewards.py
 
 plot:
 	$(PYTHON) experiments/plot_rewards.py
