@@ -27,7 +27,7 @@ class Replaybuffer:
     def __len__(self):
         return len(self.buffer)
     
-class DQN(nn.Module):
+class DDQN(nn.Module):
     def __init__(self, state_dim, action_dim):
         super().__init__()
 
@@ -43,10 +43,10 @@ class DQN(nn.Module):
         return self.net(x)
 
 
-class DQNAgent:
+class DDQNAgent:
     def __init__(self, state_dim, action_dim):
-        self.online_net = DQN(state_dim, action_dim)
-        self.target_net = DQN(state_dim, action_dim)
+        self.online_net = DDQN(state_dim, action_dim)
+        self.target_net = DDQN(state_dim, action_dim)
         self.target_net.load_state_dict(self.online_net.state_dict())
         self.target_net.eval()
 

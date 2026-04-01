@@ -1,5 +1,5 @@
 from env.task_env import TaskSchedulingEnv
-from agents.dqn import DQNAgent
+from agents.ddqn import DDQNAgent
 import numpy as np
 
 
@@ -9,7 +9,7 @@ def train():
     state_dim = env.observation_space.shape[0]
     action_dim = env.action_space.n
 
-    agent = DQNAgent(state_dim, action_dim)
+    agent = DDQNAgent(state_dim, action_dim)
     rewards = []
 
     for episode in range(1000):

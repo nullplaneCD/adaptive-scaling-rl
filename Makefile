@@ -16,7 +16,7 @@ threshold:
 	$(PYTHON) -m baseline.threshold_scaling
 
 train:
-	$(PYTHON) -m experiments.run_dqn
+	$(PYTHON) -m experiments.run_ddqn
 
 plot:
 	$(PYTHON) experiments/plot_rewards.py
