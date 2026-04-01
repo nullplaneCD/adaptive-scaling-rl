@@ -97,7 +97,7 @@ class TaskSchedulingEnv(gym.Env):
             self.running_tasks.remove(task)
             self.available_cpu += task["cpu_required"]
             self.completed_tasks += 1
-            reward += 10.0 * task["priority"]
+            reward += 20.0 * task["priority"]
 
         # 2. Update waiting tasks
         expired = []
@@ -125,9 +125,9 @@ class TaskSchedulingEnv(gym.Env):
                     self.running_tasks.append(task)
                     self.queue.remove(task)
                 else:
-                    reward -= 2.0
+                    reward -= 0.5
             else:
-                reward -= 1.0
+                reward -= 0.2
 
         elif action == scale_up_action:
             if self.total_cpu < self.max_cpu:
@@ -147,8 +147,8 @@ class TaskSchedulingEnv(gym.Env):
                 reward -= 2.0
 
         # 4. Ongoing penalties
-        reward -= 0.2 * len(self.queue)      # waiting penalty
-        reward -= 0.05 * self.available_cpu  # idle CPU penalty
+        reward -= 0.1 * len(self.queue)      # waiting penalty
+        reward -= 0.02 * self.available_cpu  # idle CPU penalty
 
         # 5. New arrivals
         self._maybe_add_task(force=False)

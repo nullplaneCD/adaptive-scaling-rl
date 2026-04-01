@@ -6,7 +6,7 @@ import random
 from collections import deque
 
 class Replaybuffer:
-    def __init__(self, capacity=10000):
+    def __init__(self, capacity=50000):
         self.buffer = deque(maxlen=capacity)
 
     def push(self, state, action, reward, next_state, done):
@@ -32,11 +32,11 @@ class DQN(nn.Module):
         super().__init__()
 
         self.net = nn.Sequential(
-            nn.Linear(state_dim, 128),
+            nn.Linear(state_dim, 256),
             nn.ReLU(),
-            nn.Linear(128, 128),
+            nn.Linear(256, 256),
             nn.ReLU(),
-            nn.Linear(128, action_dim),
+            nn.Linear(256, action_dim),
         )
 
     def forward(self, x):
@@ -50,7 +50,7 @@ class DQNAgent:
         self.target_net.load_state_dict(self.online_net.state_dict())
         self.target_net.eval()
 
-        self.optimizer = optim.Adam(self.online_net.parameters(), lr=1e-3)
+        self.optimizer = optim.Adam(self.online_net.parameters(), lr=5e-4)
         self.loss_fn = nn.MSELoss()
 
         self.train_steps = 0
@@ -60,9 +60,9 @@ class DQNAgent:
 
         self.epsilon = 1.0
         self.epsilon_min = 0.05
-        self.epsilon_decay = 0.995
+        self.epsilon_decay = 0.999
 
-        self.replay_buffer = Replaybuffer(10000)
+        self.replay_buffer = Replaybuffer(50000)
         self.batch_size = 64
 
         self.action_dim = action_dim
@@ -102,8 +102,10 @@ class DQNAgent:
         loss.backward()
         self.optimizer.step()
         self.train_steps += 1
+        if self.train_steps > 500:
+            self.decay_epsilon()
         if self.train_steps % self.target_update_freq == 0:
-              self.target_net.load_state_dict(self.online_net.state_dict())
+            self.target_net.load_state_dict(self.online_net.state_dict())
 
     def decay_epsilon(self):
         self.epsilon = max(self.epsilon_min, self.epsilon * self.epsilon_decay)

@@ -24,10 +24,10 @@ def main():
 
     plt.figure(figsize=(10, 5))
     plt.plot(rewards, label="raw reward", alpha=0.35)
-    plt.plot(avg10, label="movning average (10)")
+    plt.plot(avg10, label="moving average (10)")
     plt.xlabel("Episode")
     plt.ylabel("Reward")
-    plt.title("DQN Training Reward Curve")
+    plt.title("DDQN Training Reward Curve")
     plt.legend()
     plt.grid(True)
     plt.tight_layout()
