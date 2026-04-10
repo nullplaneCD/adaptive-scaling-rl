@@ -50,8 +50,8 @@ class DDQNAgent:
         self.target_net.load_state_dict(self.online_net.state_dict())
         self.target_net.eval()
 
-        self.optimizer = optim.Adam(self.online_net.parameters(), lr=5e-4)
-        self.loss_fn = nn.MSELoss()
+        self.optimizer = optim.Adam(self.online_net.parameters(), lr=1e-4)
+        self.loss_fn = nn.SmoothL1Loss()  # Huber loss: robust to large reward scale
 
         self.train_steps = 0
         self.target_update_freq = 100
@@ -60,7 +60,7 @@ class DDQNAgent:
 
         self.epsilon = 1.0
         self.epsilon_min = 0.05
-        self.epsilon_decay = 0.999
+        self.epsilon_decay = 0.999995  # per-step decay: reaches 0.05 at ~300k steps
 
         self.replay_buffer = Replaybuffer(50000)
         self.batch_size = 64
@@ -102,8 +102,7 @@ class DDQNAgent:
         loss.backward()
         self.optimizer.step()
         self.train_steps += 1
-        if self.train_steps > 500:
-            self.decay_epsilon()
+
         if self.train_steps % self.target_update_freq == 0:
             self.target_net.load_state_dict(self.online_net.state_dict())
 

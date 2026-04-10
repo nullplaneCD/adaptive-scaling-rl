@@ -1,7 +1,7 @@
 PYTHON = python3
 PIP = pip3
 
-.PHONY: install test fifo threshold train plot clean
+.PHONY: install test fifo threshold train plot plot_all clean train_all
 
 install:
 	$(PIP) install -r requirements.txt
@@ -15,12 +15,23 @@ fifo:
 threshold:
 	$(PYTHON) -m baseline.threshold_scaling
 
+SEED ?= 0
+
 train:
-	$(PYTHON) -m experiments.run_ddqn
+	$(PYTHON) -m experiments.run_ddqn $(SEED)
 	$(PYTHON) experiments/plot_rewards.py
 
 plot:
-	$(PYTHON) experiments/plot_rewards.py
+	$(PYTHON) experiments/plot_rewards.py single
+
+plot_all:
+	$(PYTHON) experiments/plot_rewards.py multi
+
+train_all:
+	for seed in 0 1 2 3 4 5 6 7 8 9; do \
+		$(PYTHON) -m experiments.run_ddqn $$seed; \
+	done
+	$(PYTHON) experiments/plot_rewards.py multi
 
 clean:
 	rm -f results/*.npy results/*.png

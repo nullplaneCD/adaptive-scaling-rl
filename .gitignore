@@ -6,3 +6,4 @@ venv/
 results/
 .vscode/
 *.log
+.claude/
