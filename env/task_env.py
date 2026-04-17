@@ -12,6 +12,13 @@ class TaskSchedulingEnv(gym.Env):
         1..max_queue     -> schedule task at queue index (action - 1)
         max_queue + 1    -> scale up by 1 CPU core
         max_queue + 2    -> scale down by 1 CPU core
+
+    Workload phases alternate every phase_length steps:
+        burst phase  -> high arrival probability (arrival_prob_burst)
+        quiet phase  -> low arrival probability  (arrival_prob_quiet)
+
+    The agent observes the current arrival probability and steps remaining
+    in the current phase, enabling anticipatory scaling decisions.
     """
 
     metadata = {"render_modes": []}
@@ -24,7 +31,9 @@ class TaskSchedulingEnv(gym.Env):
         init_cpu: int = 8,
         max_running: int = 16,
         max_steps: int = 200,
-        arrival_prob: float = 0.7,
+        arrival_prob_burst: float = 0.9,
+        arrival_prob_quiet: float = 0.3,
+        phase_length: int = 33,
         scale_up_cost: float = 0.5,
         scale_down_cost: float = 0.2,
     ):
@@ -38,7 +47,9 @@ class TaskSchedulingEnv(gym.Env):
         self.init_cpu = init_cpu
         self.max_running = max_running
         self.max_steps = max_steps
-        self.arrival_prob = arrival_prob
+        self.arrival_prob_burst = arrival_prob_burst
+        self.arrival_prob_quiet = arrival_prob_quiet
+        self.phase_length = phase_length
         self.scale_up_cost = scale_up_cost
         self.scale_down_cost = scale_down_cost
 
@@ -49,9 +60,10 @@ class TaskSchedulingEnv(gym.Env):
         self.action_space = spaces.Discrete(self.max_queue + 3)
 
         # state:
-        # [total_cpu_norm, available_cpu_norm, running_count_norm, queue_len_norm]
+        # [total_cpu_norm, available_cpu_norm, running_count_norm, queue_len_norm,
+        #  arrival_prob_norm, phase_progress_norm]
         # + queued tasks: [cpu_required, duration, priority, deadline] * max_queue
-        obs_dim = 4 + self.max_queue * 4
+        obs_dim = 6 + self.max_queue * 4
         self.observation_space = spaces.Box(
             low=np.zeros(obs_dim, dtype=np.float32),
             high=np.ones(obs_dim, dtype=np.float32),
@@ -65,6 +77,15 @@ class TaskSchedulingEnv(gym.Env):
         self.queue = []
         self.completed_tasks = 0
         self.failed_tasks = 0
+
+    def _get_arrival_prob(self):
+        """Alternates between burst and quiet phases every phase_length steps."""
+        phase = (self.steps // self.phase_length) % 2
+        return self.arrival_prob_burst if phase == 0 else self.arrival_prob_quiet
+
+    def _get_phase_progress(self):
+        """Normalised progress within current phase (0=start, 1=end)."""
+        return (self.steps % self.phase_length) / self.phase_length
 
     def reset(self, seed=None, options=None):
         super().reset(seed=seed)
@@ -138,7 +159,6 @@ class TaskSchedulingEnv(gym.Env):
                 reward -= 1.0
 
         elif action == scale_down_action:
-            # only allow scale down if there is at least 1 idle CPU
             if self.total_cpu > self.min_cpu and self.available_cpu >= 1:
                 self.total_cpu -= 1
                 self.available_cpu -= 1
@@ -147,11 +167,10 @@ class TaskSchedulingEnv(gym.Env):
                 reward -= 2.0
 
         # 4. Ongoing penalties
-        reward -= 0.1 * len(self.queue)      # waiting penalty
-        reward -= 0.02 * self.available_cpu  # idle CPU penalty
+        reward -= 0.1 * len(self.queue)       # waiting penalty
+        reward -= 0.02 * self.available_cpu   # idle CPU penalty
 
-        # 5. New arrivals
-        self._maybe_add_task(force=False)
+        # 5. Single arrival per step using dynamic phase-based probability
         self._maybe_add_task(force=False)
 
         terminated = self.steps >= self.max_steps
@@ -160,22 +179,42 @@ class TaskSchedulingEnv(gym.Env):
         return self._get_obs(), reward, terminated, truncated, self._get_info()
 
     def _maybe_add_task(self, force=False):
-        if force or random.random() < self.arrival_prob:
+        prob = self._get_arrival_prob()
+        if force or random.random() < prob:
             if len(self.queue) < self.max_queue:
-                task = {
-                    "cpu_required": random.randint(1, 4),
-                    "duration": random.randint(1, 6),
-                    "priority": random.randint(1, 3),
-                    "deadline": random.randint(4, 12),
-                }
-                self.queue.append(task)
+                priority = random.randint(1, 3)
+
+                if priority == 3:   # high priority — urgent, lightweight
+                    cpu_required = random.randint(1, 2)
+                    duration     = random.randint(1, 3)
+                    deadline     = random.randint(3, 6)
+                elif priority == 2: # medium priority
+                    cpu_required = random.randint(1, 3)
+                    duration     = random.randint(2, 5)
+                    deadline     = random.randint(5, 9)
+                else:               # low priority — heavy batch job
+                    cpu_required = random.randint(2, 4)
+                    duration     = random.randint(3, 6)
+                    deadline     = random.randint(8, 12)
+
+                self.queue.append({
+                    "cpu_required": cpu_required,
+                    "duration":     duration,
+                    "priority":     priority,
+                    "deadline":     deadline,
+                })
 
     def _get_obs(self):
+        arrival_prob = self._get_arrival_prob()
+        phase_progress = self._get_phase_progress()
+
         obs = [
             self.total_cpu / self.max_cpu,
             self.available_cpu / self.max_cpu,
             len(self.running_tasks) / max(1, self.max_running),
             len(self.queue) / self.max_queue,
+            arrival_prob,                   # current load intensity (0.3 or 0.9)
+            phase_progress,                 # how far into current phase (0→1)
         ]
 
         for i in range(self.max_queue):
@@ -202,4 +241,6 @@ class TaskSchedulingEnv(gym.Env):
             "total_cpu": self.total_cpu,
             "available_cpu": self.available_cpu,
             "used_cpu": used_cpu,
+            "arrival_prob": self._get_arrival_prob(),
+            "phase": "burst" if (self.steps // self.phase_length) % 2 == 0 else "quiet",
         }

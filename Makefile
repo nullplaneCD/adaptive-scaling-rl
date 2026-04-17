@@ -1,7 +1,7 @@
 PYTHON = python3
 PIP = pip3
 
-.PHONY: install test fifo threshold train plot plot_all clean train_all
+.PHONY: install test fifo threshold baseline train plot plot_all clean train_all
 
 install:
 	$(PIP) install -r requirements.txt
@@ -14,6 +14,11 @@ fifo:
 
 threshold:
 	$(PYTHON) -m baseline.threshold_scaling
+
+baseline:
+	$(PYTHON) -m experiments.run_baseline
+	$(PYTHON) -m baseline.threshold_scaling
+	$(PYTHON) -m baseline.fifo
 
 SEED ?= 0
 

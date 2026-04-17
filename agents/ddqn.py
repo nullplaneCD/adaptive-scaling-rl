@@ -54,7 +54,7 @@ class DDQNAgent:
         self.loss_fn = nn.SmoothL1Loss()  # Huber loss: robust to large reward scale
 
         self.train_steps = 0
-        self.target_update_freq = 100
+        self.target_update_freq = 500  # spans ~15 burst-quiet cycles to prevent phase-biased Q-value propagation
 
         self.gamma = 0.99
 
@@ -64,6 +64,7 @@ class DDQNAgent:
 
         self.replay_buffer = Replaybuffer(50000)
         self.batch_size = 64
+        self.warmup_steps = 5000  # collect experience before training starts
 
         self.action_dim = action_dim
 
@@ -76,7 +77,7 @@ class DDQNAgent:
         return q_values.argmax().item()
 
     def train_step(self):
-        if len(self.replay_buffer) < self.batch_size:
+        if len(self.replay_buffer) < self.warmup_steps:
             return
         
         states, actions, rewards, next_states, dones = self.replay_buffer.sample(self.batch_size)

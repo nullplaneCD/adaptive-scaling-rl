@@ -2,7 +2,7 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 
-RANDOM_BASELINE = 2654
+RANDOM_BASELINE = 1443
 
 def moving_average(values, window=50):
     averages = []
@@ -25,6 +25,8 @@ def plot_single():
     plt.plot(rewards, label="raw reward", alpha=0.35)
     plt.plot(avg, label="moving average (50)")
     plt.axhline(y=RANDOM_BASELINE, color='red', linestyle='--', label=f"random baseline ({RANDOM_BASELINE})")
+    plt.axhline(y=3872, color='green', linestyle='--', label="FIFO baseline (3872)")
+    plt.axhline(y=-502, color='orange', linestyle='--', label="threshold baseline (-502)")
     plt.xlabel("Episode")
     plt.ylabel("Reward")
     plt.title("DDQN Training Reward Curve")
@@ -66,6 +68,8 @@ def plot_multi_seed(seeds=range(10)):
     plt.plot(episodes, mean, color='steelblue', linewidth=2, label=f"mean reward (n={len(all_rewards)} seeds)")
     plt.fill_between(episodes, mean - std, mean + std, alpha=0.25, color='steelblue', label="± 1 std")
     plt.axhline(y=RANDOM_BASELINE, color='red', linestyle='--', linewidth=1.5, label=f"random baseline ({RANDOM_BASELINE})")
+    plt.axhline(y=3872, color='green', linestyle='--', linewidth=1.5, label="FIFO baseline (3872)")
+    plt.axhline(y=-502, color='orange', linestyle='--', linewidth=1.5, label="threshold baseline (-502)")
     plt.xlabel("Episode")
     plt.ylabel("Reward (moving avg, window=50)")
     plt.title(f"DDQN Training Reward Curve — Mean ± Std over {len(all_rewards)} Seeds")

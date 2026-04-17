@@ -1,3 +1,4 @@
+import numpy as np
 from env.task_env import TaskSchedulingEnv
 
 
@@ -5,39 +6,47 @@ def threshold_policy(env: TaskSchedulingEnv):
     queue_len = len(env.queue)
     idle_cpu = env.available_cpu
 
-    # action定义
     scale_up = env.max_queue + 1
     scale_down = env.max_queue + 2
 
-    # 规则
+    # Scale up reactively when queue is long
     if queue_len > 3:
         return scale_up
+    # Scale down when too many idle CPUs
     elif idle_cpu > 3:
         return scale_down
+    # Schedule first task in queue if affordable
     elif queue_len > 0:
-        return 1  # 调度第一个任务
-    else:
-        return 0  # do nothing
+        task = env.queue[0]
+        if task["cpu_required"] <= env.available_cpu:
+            return 1
+    return 0  # no-op
 
 
-def run_threshold():
+def run_threshold(n_episodes=500):
     env = TaskSchedulingEnv()
-    obs, info = env.reset()
+    rewards = []
 
-    total_reward = 0
+    for episode in range(n_episodes):
+        obs, _ = env.reset()
+        total_reward = 0
 
-    for step in range(100):
-        action = threshold_policy(env)
-        obs, reward, terminated, truncated, info = env.step(action)
+        for step in range(200):
+            action = threshold_policy(env)
+            obs, reward, terminated, truncated, _ = env.step(action)
+            total_reward += reward
+            if terminated or truncated:
+                break
 
-        total_reward += reward
+        rewards.append(total_reward)
 
-        print(f"step={step}, action={action}, reward={reward:.2f}")
-
-        if terminated or truncated:
-            break
-
-    print("TOTAL REWARD:", total_reward)
+    rewards = np.array(rewards)
+    print(f"Threshold baseline over {n_episodes} episodes:")
+    print(f"  Mean reward : {np.mean(rewards):.2f}")
+    print(f"  Std  reward : {np.std(rewards):.2f}")
+    print(f"  Min  reward : {np.min(rewards):.2f}")
+    print(f"  Max  reward : {np.max(rewards):.2f}")
+    return rewards
 
 
 if __name__ == "__main__":
