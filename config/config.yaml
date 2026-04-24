@@ -1,0 +1,81 @@
+# ProScale Configuration
+# ----------------------
+# All tunable parameters for the simulation environment, DDQN agent,
+# and training pipeline are defined here.
+# Edit this file to run experiments — no changes to source code required.
+
+# ── Environment ────────────────────────────────────────────────────────────────
+environment:
+  max_queue: 5          # Maximum number of tasks waiting in queue
+  min_cpu: 2            # Minimum CPU cores (floor for scale-down)
+  max_cpu: 16           # Maximum CPU cores (ceiling for scale-up)
+  init_cpu: 8           # CPU cores at episode start
+  max_running: 16       # Maximum concurrently running tasks
+  max_steps: 200        # Steps per episode
+
+  # Burst / quiet workload phase model
+  # Grounded in Google cluster trace: 3x peak/off-peak arrival ratio
+  arrival_prob_burst: 0.9   # Task arrival probability during burst phase
+  arrival_prob_quiet: 0.3   # Task arrival probability during quiet phase
+  phase_length: 33           # Steps per phase (~3 cycles per 200-step episode)
+
+  # Scaling costs
+  scale_up_cost: 0.5         # Penalty per scale-up action
+  scale_down_cost: 0.2       # Penalty per scale-down action
+
+  # Reward shaping
+  reward:
+    task_completion_multiplier: 20.0  # Reward per completed task = multiplier × priority
+    deadline_miss_penalty: 8.0        # Penalty per expired task
+    queue_length_penalty: 0.1         # Per-step penalty × queue length
+    idle_cpu_penalty: 0.02            # Per-step penalty × idle CPU cores
+    invalid_schedule_penalty: 0.5     # Penalty for scheduling unaffordable task
+    empty_schedule_penalty: 0.2       # Penalty for scheduling empty queue slot
+    scale_limit_penalty: 1.0          # Penalty for scaling beyond limits (up)
+    scale_down_limit_penalty: 2.0     # Penalty for scaling beyond limits (down)
+
+# ── DDQN Agent ─────────────────────────────────────────────────────────────────
+agent:
+  # Neural network
+  hidden_dim: 256       # Hidden layer size (both layers)
+
+  # Optimiser
+  learning_rate: 0.0001 # Adam learning rate (1e-4)
+
+  # Replay buffer
+  buffer_capacity: 50000  # Maximum transitions stored
+  batch_size: 64           # Transitions sampled per training step
+  warmup_steps: 5000       # Minimum buffer size before training begins
+
+  # Temporal discount
+  gamma: 0.99              # Discount factor for future rewards
+
+  # Exploration schedule (epsilon-greedy, per-step decay)
+  epsilon_start: 1.0       # Initial exploration rate
+  epsilon_min: 0.05        # Minimum exploration rate (5% random forever)
+  epsilon_decay: 0.999995  # Multiplicative decay per environment step
+                           # Reaches epsilon_min at ~300,000 steps (~1,500 episodes)
+
+  # Target network
+  target_update_freq: 500  # Hard update every N train steps
+                           # At 500 spans ~15 burst-quiet cycles, preventing
+                           # phase-biased Q-value propagation
+
+# ── Training ───────────────────────────────────────────────────────────────────
+training:
+  episodes: 5000           # Total training episodes
+  seed: 0                  # Default random seed (override with CLI: python run_ddqn.py <seed>)
+  save_freq: 100           # Save reward array every N episodes
+  log_freq: 100            # Print progress every N episodes
+  results_dir: results/    # Directory for saved reward arrays
+
+# ── Evaluation ─────────────────────────────────────────────────────────────────
+evaluation:
+  baseline_episodes: 500          # Episodes to evaluate each baseline policy
+  seeds: [0,1,2,3,4,5,6,7,8,9]   # Seeds for multi-seed evaluation
+  plot_window: 50                  # Moving average window for training curves
+
+  # Measured baseline reference values (phase-aware environment)
+  random_baseline:    1443
+  fifo_baseline:      3872
+  threshold_baseline: -502

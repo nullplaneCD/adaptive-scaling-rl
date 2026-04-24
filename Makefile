@@ -1,7 +1,7 @@
 PYTHON = python3
 PIP = pip3
 
-.PHONY: install test fifo threshold baseline train plot plot_all clean train_all
+.PHONY: install test fifo threshold baseline train plot plot_all clean train_all serve
 
 install:
 	$(PIP) install -r requirements.txt
@@ -37,6 +37,9 @@ train_all:
 		$(PYTHON) -m experiments.run_ddqn $$seed; \
 	done
 	$(PYTHON) experiments/plot_rewards.py multi
+
+serve:
+	uvicorn api.server:app --reload --port 8000
 
 clean:
 	rm -f results/*.npy results/*.png
