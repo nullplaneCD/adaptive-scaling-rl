@@ -61,6 +61,9 @@ def train(seed=0):
             log.info("Episode %4d | reward=%8.2f | avg10=%8.2f | epsilon=%.4f",
                      episode, total_reward, avg10, agent.epsilon)
 
+    # Save checkpoint for inference
+    torch.save(agent.online_net.state_dict(), f"{results_dir}/agent_checkpoint.pt")
+    log.info("Checkpoint saved to %s/agent_checkpoint.pt", results_dir)
     log.info("Training complete | seed=%d | final_avg10=%.2f", seed, avg10)
 
 

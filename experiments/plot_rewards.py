@@ -33,7 +33,7 @@ def plot_single():
 
     plt.figure(figsize=(10, 5))
     plt.plot(rewards, label="raw reward", alpha=0.35)
-    plt.plot(avg, label=f"moving average ({window})")
+    plt.plot(avg, label=f"DDQN (avg-{window})", linewidth=2)
     plt.axhline(y=RANDOM_BASELINE,    color="red",    linestyle="--", label=f"random baseline ({RANDOM_BASELINE})")
     plt.axhline(y=FIFO_BASELINE,      color="green",  linestyle="--", label=f"FIFO baseline ({FIFO_BASELINE})")
     plt.axhline(y=THRESHOLD_BASELINE, color="orange", linestyle="--", label=f"threshold baseline ({THRESHOLD_BASELINE})")

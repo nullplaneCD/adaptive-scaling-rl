@@ -24,22 +24,22 @@ SEED ?= 0
 
 train:
 	$(PYTHON) -m experiments.run_ddqn $(SEED)
-	$(PYTHON) experiments/plot_rewards.py
+	$(PYTHON) -m experiments.plot_rewards single
 
 plot:
-	$(PYTHON) experiments/plot_rewards.py single
+	$(PYTHON) -m experiments.plot_rewards single
 
 plot_all:
-	$(PYTHON) experiments/plot_rewards.py multi
+	$(PYTHON) -m experiments.plot_rewards multi
 
 train_all:
 	for seed in 0 1 2 3 4 5 6 7 8 9; do \
 		$(PYTHON) -m experiments.run_ddqn $$seed; \
 	done
-	$(PYTHON) experiments/plot_rewards.py multi
+	$(PYTHON) -m experiments.plot_rewards multi
 
 serve:
-	uvicorn api.server:app --reload --port 8000
+	python3 -m uvicorn api.server:app --reload --port 8000
 
 clean:
 	rm -f results/*.npy results/*.png
