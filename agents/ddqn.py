@@ -178,7 +178,7 @@ class DDQNAgent:
         self.epsilon_min = 0.05
         self.epsilon_decay = 0.999995  # per-step decay: reaches 0.05 at ~300k steps
 
-        self.replay_buffer = Replaybuffer(50000)  # Fix 1: uniform buffer, reward signal change only
+        self.replay_buffer = PrioritizedReplayBuffer()  # Fix 2: PER surfaces rare quiet-phase transitions
         self.batch_size = 64
         self.warmup_steps = 5000  # collect experience before training starts
 
@@ -196,7 +196,7 @@ class DDQNAgent:
         if len(self.replay_buffer) < self.warmup_steps:
             return
 
-        states, actions, rewards, next_states, dones = \
+        states, actions, rewards, next_states, dones, weights, indices = \
             self.replay_buffer.sample(self.batch_size)
 
         states      = torch.FloatTensor(states)
@@ -204,6 +204,7 @@ class DDQNAgent:
         rewards     = torch.FloatTensor(rewards).unsqueeze(1)
         dones       = torch.FloatTensor(dones).unsqueeze(1)
         next_states = torch.FloatTensor(next_states)
+        weights     = torch.FloatTensor(weights).unsqueeze(1)  # IS weights
 
         q_values = self.online_net(states).gather(1, actions)
 
@@ -215,7 +216,11 @@ class DDQNAgent:
             next_q_values = self.target_net(next_states).gather(1, best_actions)
             target        = rewards + self.gamma * next_q_values * (1 - dones)
 
-        loss = self.loss_fn(q_values, target)
+        td_errors = (q_values - target).detach().squeeze(1).cpu().numpy()
+        self.replay_buffer.update_priorities(indices, td_errors)
+
+        # Weight loss by importance sampling to correct prioritised sampling bias
+        loss = (weights * (q_values - target) ** 2).mean()
 
         self.optimizer.zero_grad()
         loss.backward()

@@ -103,15 +103,12 @@ class ClusterState(BaseModel):
         json_schema_extra = {
             "example": {
                 "total_cpu":      0.5,
-                "available_cpu":  0.25,
-                "running_tasks":  0.3,
-                "queue_length":   0.6,
-                "arrival_prob":   0.9,
-                "phase_progress": 0.7,
-                "queue_tasks": [
-                    [0.5, 0.5, 1.0, 0.5],
-                    [0.25, 0.33, 0.67, 0.75],
-                ],
+                "available_cpu":  0.5,
+                "running_tasks":  0.0,
+                "queue_length":   0.0,
+                "arrival_prob":   0.3,
+                "phase_progress": 0.0,
+                "queue_tasks":    [],
             }
         }
 
